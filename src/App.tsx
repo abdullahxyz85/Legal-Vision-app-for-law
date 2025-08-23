@@ -107,7 +107,7 @@ function ChatApplication({ user, onLogout }: ChatApplicationProps) {
     newConversation,
     selectConversation,
     clearAllData,
-  } = useChat();
+  } = useChat(user?.email);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -119,9 +119,9 @@ function ChatApplication({ user, onLogout }: ChatApplicationProps) {
     scrollToBottom();
   }, [currentConversation?.messages]);
 
-  // Handle logout - clear chat data and call the logout prop
+  // Handle logout - clear current session but preserve user's chat history
   const handleLogout = useCallback(() => {
-    clearAllData();
+    clearAllData(); // This only clears current session, not localStorage
     onLogout();
   }, [clearAllData, onLogout]);
 

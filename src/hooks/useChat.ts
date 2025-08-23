@@ -24,13 +24,16 @@ export interface Conversation {
 const CONVERSATIONS_STORAGE_KEY = 'legal-vision-conversations';
 const CURRENT_CONVERSATION_STORAGE_KEY = 'legal-vision-current-conversation';
 
-export const useChat = () => {
+export const useChat = (userEmail?: string) => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
 
   const currentConversation = conversations.find(c => c.id === currentConversationId);
+
+  // Generate user-specific storage keys
+  const getUserStorageKey = useCallback((key: string) => userEmail ? `${key}-${userEmail}` : key, [userEmail]);
 
   // Helper function to convert stored conversation data back to proper types
   const convertStoredConversation = (conv: Conversation): Conversation => {
@@ -49,48 +52,61 @@ export const useChat = () => {
   useEffect(() => {
     const initializeChat = () => {
       try {
-        // Load conversations
-        const savedConversations = localStorage.getItem(CONVERSATIONS_STORAGE_KEY);
+        // Only initialize if we have a user email
+        if (!userEmail) {
+          setIsInitialized(true);
+          return;
+        }
+
+        const userConversationsKey = getUserStorageKey(CONVERSATIONS_STORAGE_KEY);
+        const userCurrentConversationKey = getUserStorageKey(CURRENT_CONVERSATION_STORAGE_KEY);
+
+        // Load conversations for this specific user
+        const savedConversations = localStorage.getItem(userConversationsKey);
         if (savedConversations) {
           const parsedConversations = JSON.parse(savedConversations) as Conversation[];
           const conversationsWithDates = parsedConversations.map(convertStoredConversation);
           setConversations(conversationsWithDates);
         }
 
-        // Load current conversation ID
-        const savedCurrentId = localStorage.getItem(CURRENT_CONVERSATION_STORAGE_KEY);
+        // Load current conversation ID for this user
+        const savedCurrentId = localStorage.getItem(userCurrentConversationKey);
         if (savedCurrentId) {
           setCurrentConversationId(savedCurrentId);
         }
       } catch (error) {
         console.error('Error loading conversations from localStorage:', error);
-        // Clear corrupted data
-        localStorage.removeItem(CONVERSATIONS_STORAGE_KEY);
-        localStorage.removeItem(CURRENT_CONVERSATION_STORAGE_KEY);
+        // Clear corrupted data for this user
+        if (userEmail) {
+          localStorage.removeItem(getUserStorageKey(CONVERSATIONS_STORAGE_KEY));
+          localStorage.removeItem(getUserStorageKey(CURRENT_CONVERSATION_STORAGE_KEY));
+        }
       }
       setIsInitialized(true);
     };
 
     initializeChat();
-  }, []);
+  }, [userEmail, getUserStorageKey]);
 
   // Save conversations to localStorage whenever they change
   useEffect(() => {
-    if (isInitialized) {
-      localStorage.setItem(CONVERSATIONS_STORAGE_KEY, JSON.stringify(conversations));
+    if (isInitialized && userEmail) {
+      const userConversationsKey = getUserStorageKey(CONVERSATIONS_STORAGE_KEY);
+      localStorage.setItem(userConversationsKey, JSON.stringify(conversations));
     }
-  }, [conversations, isInitialized]);
+  }, [conversations, isInitialized, userEmail, getUserStorageKey]);
 
   // Save current conversation ID whenever it changes
   useEffect(() => {
-    if (isInitialized) {
+    if (isInitialized && userEmail) {
+      const userCurrentConversationKey = getUserStorageKey(CURRENT_CONVERSATION_STORAGE_KEY);
       if (currentConversationId) {
-        localStorage.setItem(CURRENT_CONVERSATION_STORAGE_KEY, currentConversationId);
+        localStorage.setItem(userCurrentConversationKey, currentConversationId);
       } else {
-        localStorage.removeItem(CURRENT_CONVERSATION_STORAGE_KEY);
+        localStorage.removeItem(userCurrentConversationKey);
       }
     }
-  }, [currentConversationId, isInitialized]);
+  }, [currentConversationId, isInitialized, userEmail, getUserStorageKey]);
 
   const generateId = () => Math.random().toString(36).substring(2, 15);
 
@@ -323,11 +339,23 @@ export const useChat = () => {
   }, []);
 
   const clearAllData = useCallback(() => {
+    // Only clear current session data, not persistent user data
     setConversations([]);
     setCurrentConversationId(null);
-    localStorage.removeItem(CONVERSATIONS_STORAGE_KEY);
-    localStorage.removeItem(CURRENT_CONVERSATION_STORAGE_KEY);
+    // Don't remove from localStorage - data should persist for when user logs back in
   }, []);
+
+  const clearUserData = useCallback(() => {
+    // This function completely removes user's chat history
+    if (userEmail) {
+      const userConversationsKey = getUserStorageKey(CONVERSATIONS_STORAGE_KEY);
+      const userCurrentConversationKey = getUserStorageKey(CURRENT_CONVERSATION_STORAGE_KEY);
+      localStorage.removeItem(userConversationsKey);
+      localStorage.removeItem(userCurrentConversationKey);
+    }
+    setConversations([]);
+    setCurrentConversationId(null);
+  }, [userEmail, getUserStorageKey]);
 
   return {
     conversations,
@@ -339,5 +367,6 @@ export const useChat = () => {
     newConversation,
     selectConversation,
     clearAllData,
+    clearUserData,
   };
 };
