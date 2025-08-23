@@ -1,14 +1,14 @@
-import React, { useRef, useEffect } from 'react';
-import { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import React, { useRef, useEffect, useCallback, useState } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { ChatMessage } from './components/ChatMessage';
 import { ChatInput } from './components/ChatInput';
 import { Sidebar } from './components/Sidebar';
 import { WelcomeScreen } from './components/WelcomeScreen';
 import { AuthPage } from './components/AuthPage';
 import { LandingPage } from './components/LandingPage';
+import { ProtectedRoute } from './components/ProtectedRoute';
 import { useChat } from './hooks/useChat';
-import { useAuth } from './hooks/useAuth';
+import { useAuth, User } from './hooks/useAuth';
 
 function App() {
   return (
@@ -19,33 +19,60 @@ function App() {
 }
 
 function AppContent() {
-  const { isAuthenticated, login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const { isAuthenticated, isInitialized, login, logout, user } = useAuth();
   
   // Handle login success - properly navigate after authentication
   const handleLogin = async (email: string, password: string) => {
     try {
       await login(email, password);
-      // After successful login, navigate to /app
-      navigate('/app');
+      // Navigate to the intended destination or default to /app
+      const from = location.state?.from?.pathname || '/app';
+      navigate(from, { replace: true });
     } catch (error) {
       console.error('Login failed:', error);
+      // Error handling is already done in the AuthPage component
+      throw error;
     }
   };
+
+  // Handle logout - centralized logout logic
+  const handleLogout = useCallback(() => {
+    logout();
+    navigate('/auth', { replace: true });
+  }, [logout, navigate]);
+
+  // Show loading screen while initializing auth state
+  if (!isInitialized) {
+    return (
+      <div className="h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-white/60">Loading...</p>
+        </div>
+      </div>
+    );
+  }
   
   return (
     <Routes>
       <Route path="/" element={<LandingPage />} />
+      
+      {/* Protected app routes */}
       <Route 
         path="/app/*" 
         element={
-          isAuthenticated ? (
-            <ChatApplication />
-          ) : (
-            <Navigate to="/auth" replace />
-          )
+          <ProtectedRoute 
+            isAuthenticated={isAuthenticated} 
+            isInitialized={isInitialized}
+          >
+            <ChatApplication user={user} onLogout={handleLogout} />
+          </ProtectedRoute>
         } 
       />
+      
+      {/* Auth route - redirect to app if already authenticated */}
       <Route 
         path="/auth" 
         element={
@@ -56,23 +83,30 @@ function AppContent() {
           )
         } 
       />
-      {/* Add a catch-all redirect to the landing page */}
+      
+      {/* Catch-all redirect */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
 
-function ChatApplication() {
-  const { user, logout } = useAuth();
+interface ChatApplicationProps {
+  readonly user: User | null;
+  readonly onLogout: () => void;
+}
+
+function ChatApplication({ user, onLogout }: ChatApplicationProps) {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const {
     conversations,
     currentConversation,
     currentConversationId,
     isLoading,
+    isInitialized: chatInitialized,
     sendMessage,
     newConversation,
     selectConversation,
+    clearAllData,
   } = useChat();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -84,6 +118,24 @@ function ChatApplication() {
   useEffect(() => {
     scrollToBottom();
   }, [currentConversation?.messages]);
+
+  // Handle logout - clear chat data and call the logout prop
+  const handleLogout = useCallback(() => {
+    clearAllData();
+    onLogout();
+  }, [clearAllData, onLogout]);
+
+  // Show loading screen while chat is initializing
+  if (!chatInitialized) {
+    return (
+      <div className="h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-white/60">Loading conversations...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black relative overflow-hidden">
@@ -103,7 +155,7 @@ function ChatApplication() {
           onNewConversation={newConversation}
           onSelectConversation={selectConversation}
           user={user}
-          onLogout={logout}
+          onLogout={handleLogout}
           isCollapsed={isSidebarCollapsed}
           onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
         />

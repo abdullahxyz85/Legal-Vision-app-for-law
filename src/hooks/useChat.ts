@@ -1,11 +1,11 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 
 export interface Message {
   id: string;
   content: string;
   role: 'user' | 'assistant';
   timestamp: Date;
-  structured_response?: any;
+  structured_response?: any; // eslint-disable-line @typescript-eslint/no-explicit-any
   file?: {
     name: string;
     size: number;
@@ -21,12 +21,76 @@ export interface Conversation {
   lastMessage: Date;
 }
 
+const CONVERSATIONS_STORAGE_KEY = 'legal-vision-conversations';
+const CURRENT_CONVERSATION_STORAGE_KEY = 'legal-vision-current-conversation';
+
 export const useChat = () => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   const currentConversation = conversations.find(c => c.id === currentConversationId);
+
+  // Helper function to convert stored conversation data back to proper types
+  const convertStoredConversation = (conv: Conversation): Conversation => {
+    const messagesWithDates = conv.messages.map((msg) => ({
+      ...msg,
+      timestamp: new Date(msg.timestamp)
+    }));
+    return {
+      ...conv,
+      lastMessage: new Date(conv.lastMessage),
+      messages: messagesWithDates
+    };
+  };
+
+  // Initialize conversations from localStorage
+  useEffect(() => {
+    const initializeChat = () => {
+      try {
+        // Load conversations
+        const savedConversations = localStorage.getItem(CONVERSATIONS_STORAGE_KEY);
+        if (savedConversations) {
+          const parsedConversations = JSON.parse(savedConversations) as Conversation[];
+          const conversationsWithDates = parsedConversations.map(convertStoredConversation);
+          setConversations(conversationsWithDates);
+        }
+
+        // Load current conversation ID
+        const savedCurrentId = localStorage.getItem(CURRENT_CONVERSATION_STORAGE_KEY);
+        if (savedCurrentId) {
+          setCurrentConversationId(savedCurrentId);
+        }
+      } catch (error) {
+        console.error('Error loading conversations from localStorage:', error);
+        // Clear corrupted data
+        localStorage.removeItem(CONVERSATIONS_STORAGE_KEY);
+        localStorage.removeItem(CURRENT_CONVERSATION_STORAGE_KEY);
+      }
+      setIsInitialized(true);
+    };
+
+    initializeChat();
+  }, []);
+
+  // Save conversations to localStorage whenever they change
+  useEffect(() => {
+    if (isInitialized) {
+      localStorage.setItem(CONVERSATIONS_STORAGE_KEY, JSON.stringify(conversations));
+    }
+  }, [conversations, isInitialized]);
+
+  // Save current conversation ID whenever it changes
+  useEffect(() => {
+    if (isInitialized) {
+      if (currentConversationId) {
+        localStorage.setItem(CURRENT_CONVERSATION_STORAGE_KEY, currentConversationId);
+      } else {
+        localStorage.removeItem(CURRENT_CONVERSATION_STORAGE_KEY);
+      }
+    }
+  }, [currentConversationId, isInitialized]);
 
   const generateId = () => Math.random().toString(36).substring(2, 15);
 
@@ -258,13 +322,22 @@ export const useChat = () => {
     setCurrentConversationId(id);
   }, []);
 
+  const clearAllData = useCallback(() => {
+    setConversations([]);
+    setCurrentConversationId(null);
+    localStorage.removeItem(CONVERSATIONS_STORAGE_KEY);
+    localStorage.removeItem(CURRENT_CONVERSATION_STORAGE_KEY);
+  }, []);
+
   return {
     conversations,
     currentConversation,
     currentConversationId,
     isLoading,
+    isInitialized,
     sendMessage,
     newConversation,
     selectConversation,
+    clearAllData,
   };
 };
