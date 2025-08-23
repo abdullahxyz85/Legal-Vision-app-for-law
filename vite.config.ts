@@ -10,7 +10,7 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    minify: 'terser',
+    minify: true, // Using the default minifier (esbuild) instead of terser
     sourcemap: false,
     rollupOptions: {
       output: {
