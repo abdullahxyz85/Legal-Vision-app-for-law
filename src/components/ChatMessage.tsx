@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bot, User, FileText, Image } from 'lucide-react';
+import { Bot, User, FileText } from 'lucide-react';
 import { StructuredResponse } from './StructuredResponse';
 
 interface ChatMessageProps {
@@ -34,14 +34,15 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
   }
   
   return (
-    <div className={`flex gap-3 p-4 ${isUser ? 'justify-start' : 'justify-end'}`}>
+    <div className={`flex gap-3 p-4 w-full ${isUser ? 'justify-start' : 'justify-end'}`}>
+      {/* User avatar - always on the left for user messages */}
       {isUser && (
         <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
           <User size={16} className="text-white" />
         </div>
       )}
       
-      <div className={`${isUser ? 'max-w-[50%]' : 'max-w-[70%]'} ${isUser ? 'order-2' : 'order-1'}`}>
+      <div className={`flex flex-col ${isUser ? 'items-start' : 'items-end'} max-w-[90%] sm:max-w-[80%] md:max-w-[70%] lg:max-w-[60%] xl:max-w-[50%]`}>
         <div className={`p-4 rounded-2xl shadow-lg ${
           isUser 
             ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-bl-md' 
@@ -104,11 +105,13 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
             </div>
           )}
         </div>
-        <div className={`text-xs text-white/40 mt-1 px-2 ${isUser ? 'text-left' : 'text-right'}`}>
+        
+        <div className={`text-xs text-white/40 mt-1 px-2 ${isUser ? 'self-start' : 'self-end'}`}>
           {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </div>
       </div>
 
+      {/* Bot avatar - always on the right for bot messages */}
       {!isUser && (
         <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-600 flex items-center justify-center">
           <Bot size={16} className="text-white" />

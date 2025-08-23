@@ -165,15 +165,15 @@ function ChatApplication({ user, onLogout }: ChatApplicationProps) {
             {!currentConversation ? (
               <WelcomeScreen onSendMessage={sendMessage} />
             ) : (
-              <div className="max-w-4xl mx-auto w-full">
+              <div className="w-full px-4 sm:px-6 lg:px-8 mx-auto">
                 {currentConversation.messages.map((message) => (
                   <ChatMessage key={message.id} message={message} />
                 ))}
                 
                 {isLoading && (
-                  <div className="flex gap-3 p-4 justify-end">
-                    <div className="max-w-[70%]">
-                      <div className="p-4 rounded-2xl rounded-br-md bg-white/10 backdrop-blur-sm border border-white/20">
+                  <div className="flex gap-3 p-4 justify-end w-full">
+                    <div className="flex flex-col items-end max-w-[90%] sm:max-w-[80%] md:max-w-[70%] lg:max-w-[60%] xl:max-w-[50%]">
+                      <div className="p-4 rounded-2xl rounded-br-md bg-gray-900/90 backdrop-blur-sm border border-white/10">
                         <div className="flex items-center gap-2 text-white/60">
                           <div className="w-2 h-2 bg-white/60 rounded-full animate-bounce"></div>
                           <div className="w-2 h-2 bg-white/60 rounded-full animate-bounce animation-delay-200"></div>
