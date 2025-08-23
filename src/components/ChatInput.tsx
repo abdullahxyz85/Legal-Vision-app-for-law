@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { Send, Paperclip, Mic, X, FileText } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Send, Plus, X, FileText, Image } from 'lucide-react';
 
 interface ChatInputProps {
   onSendMessage: (message: string, file?: File) => void;
@@ -10,7 +10,84 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }
   const [message, setMessage] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
+  const [showUploadPopover, setShowUploadPopover] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const pdfInputRef = useRef<HTMLInputElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+
+  // Close popover when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
+        setShowUploadPopover(false);
+      }
+    };
+
+    if (showUploadPopover) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showUploadPopover]);
+
+  // File validation function for images
+  const validateImageFile = async (file: File): Promise<boolean> => {
+    const allowedImageTypes = [
+      'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 
+      'image/bmp', 'image/webp', 'image/tiff', 'image/svg+xml'
+    ];
+    
+    // Check file size (max 10MB)
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (file.size > maxSize) {
+      setFileError(`File size exceeds 10MB limit. Your file is ${(file.size / 1024 / 1024).toFixed(1)}MB.`);
+      return false;
+    }
+    
+    if (!allowedImageTypes.includes(file.type)) {
+      setFileError('Only images (JPEG, PNG, GIF, etc.) are allowed.');
+      return false;
+    }
+    
+    setFileError(null);
+    return true;
+  };
+
+  // File validation function for PDFs
+  const validatePdfFile = async (file: File): Promise<boolean> => {
+    // Check file type
+    if (file.type !== 'application/pdf') {
+      setFileError('Only PDF documents are allowed.');
+      return false;
+    }
+    
+    // Check file size (max 10MB)
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (file.size > maxSize) {
+      setFileError(`File size exceeds 10MB limit. Your file is ${(file.size / 1024 / 1024).toFixed(1)}MB.`);
+      return false;
+    }
+    
+    // Check page count using heuristic
+    try {
+      const estimatedPages = Math.ceil(file.size / 102400); // 100KB per page estimate
+      
+      if (estimatedPages > 30) {
+        setFileError('PDF documents appear to exceed 30 pages. Please upload a smaller document.');
+        return false;
+      }
+    } catch (error) {
+      console.error('Error checking PDF:', error);
+      setFileError('Could not validate PDF document. Please try another file.');
+      return false;
+    }
+    
+    setFileError(null);
+    return true;
+  };
 
   // File validation function
   const validateFile = async (file: File): Promise<boolean> => {
@@ -68,6 +145,35 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }
     if (isValid) {
       setSelectedFile(file);
       setFileError(null);
+      setShowUploadPopover(false);
+    } else {
+      e.target.value = '';
+    }
+  };
+
+  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    const isValid = await validateImageFile(file);
+    if (isValid) {
+      setSelectedFile(file);
+      setFileError(null);
+      setShowUploadPopover(false);
+    } else {
+      e.target.value = '';
+    }
+  };
+
+  const handlePdfSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    const isValid = await validatePdfFile(file);
+    if (isValid) {
+      setSelectedFile(file);
+      setFileError(null);
+      setShowUploadPopover(false);
     } else {
       e.target.value = '';
     }
@@ -77,6 +183,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }
     setSelectedFile(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
+    }
+    if (imageInputRef.current) {
+      imageInputRef.current.value = '';
+    }
+    if (pdfInputRef.current) {
+      pdfInputRef.current.value = '';
     }
   };
 
@@ -129,7 +241,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }
         <div className="relative rounded-xl bg-white/5 backdrop-blur-sm border border-transparent bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-green-500/20 p-[1px] shadow-lg hover:shadow-xl transition-all duration-300">
           <div className="rounded-xl bg-gray-900/90 backdrop-blur-sm">
             <div className="flex items-end gap-3 p-4">
-              <div>
+              <div className="relative" ref={popoverRef}>
+                {/* Hidden file inputs */}
                 <input
                   type="file"
                   className="hidden"
@@ -137,14 +250,60 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }
                   onChange={handleFileSelect}
                   ref={fileInputRef}
                 />
+                <input
+                  type="file"
+                  className="hidden"
+                  accept="image/*"
+                  onChange={handleImageSelect}
+                  ref={imageInputRef}
+                />
+                <input
+                  type="file"
+                  className="hidden"
+                  accept=".pdf"
+                  onChange={handlePdfSelect}
+                  ref={pdfInputRef}
+                />
+                
+                {/* Plus button */}
                 <button
                   type="button"
-                  onClick={() => fileInputRef.current?.click()}
+                  onClick={() => setShowUploadPopover(!showUploadPopover)}
                   className="flex-shrink-0 p-2 rounded-lg bg-blue-500/20 text-white/80 hover:text-white hover:bg-blue-500/30 hover:scale-110 active:scale-95 transition-all relative"
-                  title="Upload file (PDF or image)"
+                  title="Upload file"
                 >
-                  <Paperclip size={18} />
+                  <Plus size={18} />
                 </button>
+
+                {/* Upload popover */}
+                {showUploadPopover && (
+                  <div className="absolute bottom-full left-0 mb-2 bg-gray-800/95 backdrop-blur-sm border border-gray-600/50 rounded-lg p-2 shadow-xl z-10 min-w-[120px]">
+                    <div className="flex flex-col gap-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          imageInputRef.current?.click();
+                          setShowUploadPopover(false);
+                        }}
+                        className="flex items-center gap-2 p-2 rounded-md text-white/80 hover:text-white hover:bg-blue-500/20 transition-colors text-sm"
+                      >
+                        <Image size={16} />
+                        <span>Image</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          pdfInputRef.current?.click();
+                          setShowUploadPopover(false);
+                        }}
+                        className="flex items-center gap-2 p-2 rounded-md text-white/80 hover:text-white hover:bg-red-500/20 transition-colors text-sm"
+                      >
+                        <FileText size={16} />
+                        <span>PDF</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
               
               <div className="flex-1 relative">
@@ -168,13 +327,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }
               </div>
 
               <div className="flex gap-2">
-                <button
-                  type="button"
-                  className="flex-shrink-0 p-2 rounded-lg text-white/60 hover:text-white/80 hover:bg-white/5 transition-colors"
-                >
-                  <Mic size={18} />
-                </button>
-                
                 <button
                   type="submit"
                   disabled={(!message.trim() && !selectedFile) || isLoading}
