@@ -140,18 +140,6 @@ export const useChat = (userEmail?: string, routeChatId?: string) => {
 
   const generateId = () => Math.random().toString(36).substring(2, 15);
 
-  // Backend response
-  const generateResponse = useCallback(
-    async (
-      _: string,
-      _fd?: FormData
-    ): Promise<{ content: string; chatId?: string; structured?: any }> => {
-      // We won't use this anymore; sendMessage handles actual API
-      return { content: '', chatId: undefined };
-    },
-    []
-  );
-
   const sendMessage = useCallback(
     async (content: string, file?: File) => {
       if (!content.trim() && !file) return;
@@ -187,6 +175,21 @@ export const useChat = (userEmail?: string, routeChatId?: string) => {
         };
       }
 
+      // Get current conversation to extract message history BEFORE adding the new message
+      const targetConversationId =
+        currentConversationId || conversations[0]?.id;
+      const targetConversation = conversations.find(
+        (conv) => conv.id === targetConversationId
+      );
+
+      // Get last 10 messages from current conversation (before adding the new user message)
+      const existingMessages = targetConversation?.messages || [];
+      const last10Messages = existingMessages.slice(-10).map((msg) => ({
+        role: msg.role,
+        content: msg.content,
+        timestamp: msg.timestamp.toISOString(),
+      }));
+
       // Add user message
       const userMessage: Message = {
         id: messageId,
@@ -214,6 +217,10 @@ export const useChat = (userEmail?: string, routeChatId?: string) => {
         // Build form data
         const fd = new FormData();
         fd.append('message', content);
+
+        // Add message history as JSON string
+        fd.append('message_history', JSON.stringify(last10Messages));
+
         if (file)
           fd.append(
             file.type === 'application/pdf' ? 'document' : 'image',
@@ -268,12 +275,7 @@ export const useChat = (userEmail?: string, routeChatId?: string) => {
         setIsLoading(false);
       }
     },
-    [
-      currentConversationId,
-      generateResponse,
-      conversations,
-      sendMessageMutation,
-    ]
+    [currentConversationId, conversations, sendMessageMutation]
   );
 
   const newConversation = useCallback(() => {

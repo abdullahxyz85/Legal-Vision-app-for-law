@@ -130,6 +130,10 @@ function ChatApplication() {
       selectConversation(chatId);
     }
   }, [chatId]);
+  const { refetch: refetchHistory } = useGetHistoryQuery(undefined, {
+    skip: !user,
+    refetchOnMountOrArgChange: true,
+  });
 
   // Hydrate conversation when chat data loads
   useEffect(() => {
@@ -146,6 +150,7 @@ function ChatApplication() {
         })),
       };
       hydrateConversation(mapped.id, mapped.title, mapped.messages);
+      refetchHistory();
     }
   }, [chatData]);
 
