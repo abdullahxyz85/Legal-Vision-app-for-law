@@ -1,7 +1,16 @@
+import { Bot, FileText, User } from 'lucide-react';
 import React from 'react';
-import { Bot, User, FileText, Image } from 'lucide-react';
 import { StructuredResponse } from './StructuredResponse';
-
+const renderContent = (content: any) => {
+  try {
+    // Try to parse as JSON
+    const parsed = JSON.parse(content);
+    return JSON.stringify(parsed, null, 2); // Pretty print JSON
+  } catch (error) {
+    // If it's not JSON, return as plain text
+    return content;
+  }
+};
 interface ChatMessageProps {
   message: {
     id: string;
@@ -20,62 +29,101 @@ interface ChatMessageProps {
 
 export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
   const isUser = message.role === 'user';
-  
+
   // Parse structured response if it exists
   let structuredData = null;
   if (!isUser && message.structured_response) {
     try {
-      structuredData = typeof message.structured_response === 'string' 
-        ? JSON.parse(message.structured_response) 
-        : message.structured_response;
+      structuredData =
+        typeof message.structured_response === 'string'
+          ? JSON.parse(message.structured_response)
+          : message.structured_response;
     } catch (error) {
       console.error('Error parsing structured response:', error);
     }
   }
-  
+
   return (
-    <div className={`flex gap-3 p-4 ${isUser ? 'justify-end' : 'justify-start'}`}>
+    <div
+      className={`flex gap-3 p-4 ${isUser ? 'justify-end' : 'justify-start'}`}
+    >
       {!isUser && (
         <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-600 flex items-center justify-center">
           <Bot size={16} className="text-white" />
         </div>
       )}
-      
-      <div className={`${isUser ? 'max-w-[70%]' : 'max-w-[50%]'} ${!isUser ? 'order-2' : 'order-1'}`}>
-        <div className={`p-4 rounded-2xl shadow-lg ${
-          isUser 
-            ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-br-md' 
-            : 'bg-gray-900/90 backdrop-blur-sm text-white rounded-bl-md border border-white/10'
-        }`}>
+
+      <div
+        className={`${isUser ? 'max-w-[70%]' : 'max-w-[50%]'} ${
+          !isUser ? 'order-2' : 'order-1'
+        }`}
+      >
+        <div
+          className={`p-4 rounded-2xl shadow-lg ${
+            isUser
+              ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-br-md'
+              : 'bg-gray-900/90 backdrop-blur-sm text-white rounded-bl-md border border-white/10'
+          }`}
+        >
           {!isUser && structuredData ? (
             <div className="space-y-4">
               {message.content && (
                 <div className="leading-relaxed whitespace-pre-wrap break-words mb-4">
-                  {message.content}
+                  {/* {message.content} */}
+                  {/* {JSON.stringify(JSON.parse(message?.content))} */}
+                  {/* {renderContent(message?.content)} */}
+                  {(() => {
+                    try {
+                      const parsed = JSON.parse(
+                        renderContent(message?.content)
+                      );
+                      return parsed.text || parsed;
+                    } catch {
+                      return renderContent(message?.content);
+                    }
+                  })()}
                 </div>
               )}
-              <StructuredResponse data={structuredData.response || structuredData} />
+              <StructuredResponse
+                data={structuredData.response || structuredData}
+              />
             </div>
           ) : (
             <div className="space-y-4">
               {message.content && (
                 <div className="leading-relaxed whitespace-pre-wrap break-words">
-                  {message.content}
+                  {/* {message.content} */}
+                  {/* {JSON.stringify(JSON.parse(message?.content))} */}
+                  {/* {JSON.parse(renderContent(message?.content)).text} */}
+                  {(() => {
+                    try {
+                      const parsed = JSON.parse(
+                        renderContent(message?.content)
+                      );
+                      return parsed.text || parsed;
+                    } catch {
+                      return renderContent(message?.content);
+                    }
+                  })()}
                 </div>
               )}
-              
+
               {message.file && (
                 <div className="mt-3 border border-white/10 rounded-lg overflow-hidden">
                   {message.file.type.startsWith('image/') ? (
                     <div className="relative">
-                      <img 
-                        src={message.file.url} 
+                      <img
+                        src={message.file.url}
                         alt={message.file.name}
                         className="w-full h-auto max-h-64 object-contain"
                       />
                       <div className="absolute bottom-0 left-0 right-0 bg-black/60 backdrop-blur-sm px-3 py-2 text-xs text-white/80 flex justify-between items-center">
-                        <span className="truncate max-w-[200px]">{message.file.name}</span>
-                        <span>{(message.file.size / 1024 / 1024).toFixed(2)} MB</span>
+                        <span className="truncate max-w-[200px]">
+                          {message.file.name}
+                        </span>
+                        <span>
+                          {(message.file.size / 1024 / 1024).toFixed(2)} MB
+                        </span>
                       </div>
                     </div>
                   ) : (
@@ -86,10 +134,13 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
                           {message.file.name}
                         </div>
                         <div className="text-xs text-white/60">
-                          {message.file.type === 'application/pdf' ? 'PDF Document' : 'Document'} • {(message.file.size / 1024 / 1024).toFixed(2)} MB
+                          {message.file.type === 'application/pdf'
+                            ? 'PDF Document'
+                            : 'Document'}{' '}
+                          • {(message.file.size / 1024 / 1024).toFixed(2)} MB
                         </div>
                       </div>
-                      <a 
+                      <a
                         href={message.file.url}
                         target="_blank"
                         rel="noopener noreferrer"
@@ -104,8 +155,15 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
             </div>
           )}
         </div>
-        <div className={`text-xs text-white/40 mt-1 px-2 ${isUser ? 'text-right' : 'text-left'}`}>
-          {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        <div
+          className={`text-xs text-white/40 mt-1 px-2 ${
+            isUser ? 'text-right' : 'text-left'
+          }`}
+        >
+          {message.timestamp.toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit',
+          })}
         </div>
       </div>
 
