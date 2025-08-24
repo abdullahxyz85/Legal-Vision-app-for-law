@@ -75,7 +75,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
       )}
 
       <div
-        className={`${isUser ? 'max-w-[70%]' : 'max-w-[50%]'} ${
+        className={`${isUser ? 'max-w-[90%]' : 'max-w-[90%]'} ${
           !isUser ? 'order-2' : 'order-1'
         }`}
       >
