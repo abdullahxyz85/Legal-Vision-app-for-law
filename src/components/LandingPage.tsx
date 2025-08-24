@@ -1,9 +1,33 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Shield, Search, FileText, CheckCircle, User, Bot } from 'lucide-react';
+import { ArrowRight, Shield, Search, FileText, CheckCircle, User, Bot, ArrowUp } from 'lucide-react';
 
 export const LandingPage: React.FC = () => {
   const navigate = useNavigate();
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 500) {
+        setShowScrollTop(true);
+      } else {
+        setShowScrollTop(false);
+      }
+    };
+    
+    window.addEventListener('scroll', handleScroll);
+    
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
+  
+  const scrollToTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth',
+    });
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800 text-white">
@@ -19,7 +43,6 @@ export const LandingPage: React.FC = () => {
         <div className="hidden md:flex items-center space-x-8 text-sm">
           <a href="#features" className="text-white/80 hover:text-white transition-colors">Features</a>
           <a href="#how-it-works" className="text-white/80 hover:text-white transition-colors">How it Works</a>
-          <a href="#resources" className="text-white/80 hover:text-white transition-colors">Resources</a>
           <a href="#contact" className="text-white/80 hover:text-white transition-colors">Contact</a>
         </div>
         
@@ -701,7 +724,6 @@ export const LandingPage: React.FC = () => {
               <ul className="space-y-2 text-sm">
                 <li><a href="#features" className="text-white/60 hover:text-white transition-colors">Features</a></li>
                 <li><a href="#pricing" className="text-white/60 hover:text-white transition-colors">Pricing</a></li>
-                <li><a href="#resources" className="text-white/60 hover:text-white transition-colors">Resources</a></li>
                 <li><a href="#case-studies" className="text-white/60 hover:text-white transition-colors">Case Studies</a></li>
               </ul>
             </div>
@@ -781,6 +803,22 @@ export const LandingPage: React.FC = () => {
           Chat with LegalVision AI
         </div>
       </div>
+      
+      {/* Scroll to Top Button */}
+      {showScrollTop && (
+        <div className="fixed bottom-8 left-8 z-50">
+          <button 
+            onClick={scrollToTop} 
+            className="w-12 h-12 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white shadow-lg hover:shadow-xl hover:scale-110 transition-all duration-300"
+            aria-label="Scroll to top"
+          >
+            <ArrowUp size={20} />
+          </button>
+          <div className="absolute left-0 bottom-14 bg-white text-gray-800 py-1 px-3 rounded-lg shadow-lg opacity-0 hover:opacity-100 transition-opacity duration-200 pointer-events-none text-xs whitespace-nowrap">
+            Back to top
+          </div>
+        </div>
+      )}
     </div>
   );
 };

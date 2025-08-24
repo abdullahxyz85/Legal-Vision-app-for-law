@@ -1,14 +1,15 @@
-import React, { useRef, useEffect, useCallback, useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import React, { useRef, useEffect } from 'react';
+import { useState } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { ChatMessage } from './components/ChatMessage';
 import { ChatInput } from './components/ChatInput';
 import { Sidebar } from './components/Sidebar';
 import { WelcomeScreen } from './components/WelcomeScreen';
 import { AuthPage } from './components/AuthPage';
 import { LandingPage } from './components/LandingPage';
-import { ProtectedRoute } from './components/ProtectedRoute';
 import { useChat } from './hooks/useChat';
-import { useAuth, User } from './hooks/useAuth';
+import { useAuth } from './hooks/useAuth';
+import { ArrowUp } from 'lucide-react';
 
 function App() {
   return (
@@ -19,60 +20,33 @@ function App() {
 }
 
 function AppContent() {
+  const { isAuthenticated, login } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
-  const { isAuthenticated, isInitialized, login, logout, user } = useAuth();
   
   // Handle login success - properly navigate after authentication
   const handleLogin = async (email: string, password: string) => {
     try {
       await login(email, password);
-      // Navigate to the intended destination or default to /app
-      const from = location.state?.from?.pathname || '/app';
-      navigate(from, { replace: true });
+      // After successful login, navigate to /app
+      navigate('/app');
     } catch (error) {
       console.error('Login failed:', error);
-      // Error handling is already done in the AuthPage component
-      throw error;
     }
   };
-
-  // Handle logout - centralized logout logic
-  const handleLogout = useCallback(() => {
-    logout();
-    navigate('/auth', { replace: true });
-  }, [logout, navigate]);
-
-  // Show loading screen while initializing auth state
-  if (!isInitialized) {
-    return (
-      <div className="h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-white/60">Loading...</p>
-        </div>
-      </div>
-    );
-  }
   
   return (
     <Routes>
       <Route path="/" element={<LandingPage />} />
-      
-      {/* Protected app routes */}
       <Route 
         path="/app/*" 
         element={
-          <ProtectedRoute 
-            isAuthenticated={isAuthenticated} 
-            isInitialized={isInitialized}
-          >
-            <ChatApplication user={user} onLogout={handleLogout} />
-          </ProtectedRoute>
+          isAuthenticated ? (
+            <ChatApplication />
+          ) : (
+            <Navigate to="/auth" replace />
+          )
         } 
       />
-      
-      {/* Auth route - redirect to app if already authenticated */}
       <Route 
         path="/auth" 
         element={
@@ -83,31 +57,25 @@ function AppContent() {
           )
         } 
       />
-      
-      {/* Catch-all redirect */}
+      {/* Add a catch-all redirect to the landing page */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
 
-interface ChatApplicationProps {
-  readonly user: User | null;
-  readonly onLogout: () => void;
-}
-
-function ChatApplication({ user, onLogout }: ChatApplicationProps) {
+function ChatApplication() {
+  const { user, logout } = useAuth();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [showScrollTop, setShowScrollTop] = useState(false);
   const {
     conversations,
     currentConversation,
     currentConversationId,
     isLoading,
-    isInitialized: chatInitialized,
     sendMessage,
     newConversation,
     selectConversation,
-    clearAllData,
-  } = useChat(user?.email);
+  } = useChat();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -118,24 +86,28 @@ function ChatApplication({ user, onLogout }: ChatApplicationProps) {
   useEffect(() => {
     scrollToBottom();
   }, [currentConversation?.messages]);
-
-  // Handle logout - clear current session but preserve user's chat history
-  const handleLogout = useCallback(() => {
-    clearAllData(); // This only clears current session, not localStorage
-    onLogout();
-  }, [clearAllData, onLogout]);
-
-  // Show loading screen while chat is initializing
-  if (!chatInitialized) {
-    return (
-      <div className="h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-white/60">Loading conversations...</p>
-        </div>
-      </div>
-    );
-  }
+  
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollContainer = document.querySelector('.flex-1.overflow-y-auto');
+      if (scrollContainer && scrollContainer.scrollTop > 500) {
+        setShowScrollTop(true);
+      } else {
+        setShowScrollTop(false);
+      }
+    };
+    
+    const scrollContainer = document.querySelector('.flex-1.overflow-y-auto');
+    if (scrollContainer) {
+      scrollContainer.addEventListener('scroll', handleScroll);
+    }
+    
+    return () => {
+      if (scrollContainer) {
+        scrollContainer.removeEventListener('scroll', handleScroll);
+      }
+    };
+  }, []);
 
   return (
     <div className="h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black relative overflow-hidden">
@@ -155,7 +127,7 @@ function ChatApplication({ user, onLogout }: ChatApplicationProps) {
           onNewConversation={newConversation}
           onSelectConversation={selectConversation}
           user={user}
-          onLogout={handleLogout}
+          onLogout={logout}
           isCollapsed={isSidebarCollapsed}
           onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
         />
@@ -165,15 +137,15 @@ function ChatApplication({ user, onLogout }: ChatApplicationProps) {
             {!currentConversation ? (
               <WelcomeScreen onSendMessage={sendMessage} />
             ) : (
-              <div className="w-full px-4 sm:px-6 lg:px-8 mx-auto">
+              <div className="max-w-4xl mx-auto w-full">
                 {currentConversation.messages.map((message) => (
                   <ChatMessage key={message.id} message={message} />
                 ))}
                 
                 {isLoading && (
-                  <div className="flex gap-3 p-4 justify-end w-full">
-                    <div className="flex flex-col items-end max-w-[90%] sm:max-w-[80%] md:max-w-[70%] lg:max-w-[60%] xl:max-w-[50%]">
-                      <div className="p-4 rounded-2xl rounded-br-md bg-gray-900/90 backdrop-blur-sm border border-white/10">
+                  <div className="flex gap-3 p-4 justify-end">
+                    <div className="max-w-[70%]">
+                      <div className="p-4 rounded-2xl rounded-br-md bg-white/10 backdrop-blur-sm border border-white/20">
                         <div className="flex items-center gap-2 text-white/60">
                           <div className="w-2 h-2 bg-white/60 rounded-full animate-bounce"></div>
                           <div className="w-2 h-2 bg-white/60 rounded-full animate-bounce animation-delay-200"></div>
@@ -193,6 +165,22 @@ function ChatApplication({ user, onLogout }: ChatApplicationProps) {
           </div>
           
           <ChatInput onSendMessage={sendMessage} isLoading={isLoading} />
+          
+          {/* Scroll to top button */}
+          {showScrollTop && (
+            <button 
+              onClick={() => {
+                const scrollContainer = document.querySelector('.flex-1.overflow-y-auto');
+                if (scrollContainer) {
+                  scrollContainer.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+              }}
+              className="fixed bottom-24 right-8 w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white shadow-lg hover:shadow-xl hover:scale-110 transition-all duration-300 z-50"
+              aria-label="Scroll to top"
+            >
+              <ArrowUp size={18} />
+            </button>
+          )}
         </div>
       </div>
 
