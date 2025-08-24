@@ -1,7 +1,7 @@
 // Export the main API slice
-export { default as apiSlice } from './apiSlice'
+export { default as apiSlice } from './apiSlice';
 
 // Export feature-specific API slices
-export * from './features/browserProfile/browserProfileApi'
-export * from './features/campaign/campaignApi'
-export * from './features/device/deviceApi'
+export * from './features/auth/authApi';
+export * from './features/chat/chatApi';
+export * from './features/history/historyApi';

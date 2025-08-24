@@ -1,4 +1,4 @@
-import { apiSlice } from '../apiSlice';
+import { apiSlice } from '../../apiSlice';
 
 // WhatsApp API endpoints
 export const historyApi = apiSlice.injectEndpoints({
