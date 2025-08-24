@@ -1,6 +1,7 @@
 import { Bot, FileText, User } from 'lucide-react';
 import React from 'react';
 import { StructuredResponse } from './StructuredResponse';
+
 const renderContent = (content: any) => {
   try {
     // Try to parse as JSON
@@ -11,6 +12,7 @@ const renderContent = (content: any) => {
     return content;
   }
 };
+
 interface ChatMessageProps {
   message: {
     id: string;
@@ -32,14 +34,33 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
 
   // Parse structured response if it exists
   let structuredData = null;
-  if (!isUser && message.structured_response) {
+  let responseText = message.content;
+
+  if (!isUser) {
     try {
-      structuredData =
-        typeof message.structured_response === 'string'
-          ? JSON.parse(message.structured_response)
-          : message.structured_response;
+      // First try to parse the content as JSON to extract structured_response
+      const parsedContent = JSON.parse(message.content);
+      
+      // Extract the text content
+      if (parsedContent.text) {
+        responseText = parsedContent.text;
+      }
+      
+      // Extract structured response if available
+      if (parsedContent.structured_response) {
+        structuredData = parsedContent.structured_response;
+      }
     } catch (error) {
-      console.error('Error parsing structured response:', error);
+      // If content is not JSON, check if structured_response is directly available
+      if (message.structured_response) {
+        try {
+          structuredData = typeof message.structured_response === 'string'
+            ? JSON.parse(message.structured_response)
+            : message.structured_response;
+        } catch (parseError) {
+          console.error('Error parsing structured response:', parseError);
+        }
+      }
     }
   }
 
@@ -67,44 +88,18 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
         >
           {!isUser && structuredData ? (
             <div className="space-y-4">
-              {message.content && (
+              {responseText && (
                 <div className="leading-relaxed whitespace-pre-wrap break-words mb-4">
-                  {/* {message.content} */}
-                  {/* {JSON.stringify(JSON.parse(message?.content))} */}
-                  {/* {renderContent(message?.content)} */}
-                  {(() => {
-                    try {
-                      const parsed = JSON.parse(
-                        renderContent(message?.content)
-                      );
-                      return parsed.text || parsed;
-                    } catch {
-                      return renderContent(message?.content);
-                    }
-                  })()}
+                  {responseText}
                 </div>
               )}
-              <StructuredResponse
-                data={structuredData.response || structuredData}
-              />
+              <StructuredResponse data={structuredData} />
             </div>
           ) : (
             <div className="space-y-4">
-              {message.content && (
+              {responseText && (
                 <div className="leading-relaxed whitespace-pre-wrap break-words">
-                  {/* {message.content} */}
-                  {/* {JSON.stringify(JSON.parse(message?.content))} */}
-                  {/* {JSON.parse(renderContent(message?.content)).text} */}
-                  {(() => {
-                    try {
-                      const parsed = JSON.parse(
-                        renderContent(message?.content)
-                      );
-                      return parsed.text || parsed;
-                    } catch {
-                      return renderContent(message?.content);
-                    }
-                  })()}
+                  {responseText}
                 </div>
               )}
 
