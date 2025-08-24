@@ -39,6 +39,7 @@ function AppContent() {
       navigate('/app');
     } catch (error) {
       console.error('Login failed:', error);
+      alert(error.data.detail);
     }
   };
   const handleRegister = async (
@@ -51,6 +52,7 @@ function AppContent() {
       navigate('/app');
     } catch (error) {
       console.error('Register failed:', error);
+      alert(error.data.detail);
     }
   };
 
