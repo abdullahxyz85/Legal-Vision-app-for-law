@@ -87,6 +87,13 @@ export const useAuth = () => {
     localStorage.removeItem(TOKEN_STORAGE_KEY);
   }, []);
 
+  // Function to handle forced logout (e.g., from 401 responses)
+  const forceLogout = useCallback(() => {
+    logout();
+    // Optionally redirect to login page or reload
+    window.location.reload();
+  }, [logout]);
+
   return {
     user,
     isLoading,
@@ -94,6 +101,7 @@ export const useAuth = () => {
     login,
     register,
     logout,
+    forceLogout,
     isAuthenticated: !!user,
   };
 };
