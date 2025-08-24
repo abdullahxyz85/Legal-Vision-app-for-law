@@ -85,6 +85,7 @@ export const useAuth = () => {
     setUser(null);
     localStorage.removeItem(AUTH_STORAGE_KEY);
     localStorage.removeItem(TOKEN_STORAGE_KEY);
+    window.location.reload();
   }, []);
 
   // Function to handle forced logout (e.g., from 401 responses)
