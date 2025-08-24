@@ -35,7 +35,8 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onRegister }) => {
 
     try {
       if (isLogin) {
-        await onLogin(formData.email, formData.password);
+        const response = await onLogin(formData.email, formData.password);
+        console.log('kkk', response);
       } else {
         if (formData.password !== formData.confirmPassword) {
           alert('Passwords do not match');
