@@ -1,8 +1,15 @@
 import { apiSlice } from '../../apiSlice';
 
-// WhatsApp API endpoints
 export const historyApi = apiSlice.injectEndpoints({
-  endpoints: (builder) => ({}),
+  endpoints: (builder) => ({
+    getHistory: builder.query({
+      query: () => ({
+        url: '/history',
+        method: 'GET',
+      }),
+      providesTags: ['History'],
+    }),
+  }),
 });
 
-export const {} = historyApi;
+export const { useGetHistoryQuery } = historyApi;

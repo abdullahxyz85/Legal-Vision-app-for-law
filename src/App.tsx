@@ -1,15 +1,23 @@
-import React, { useRef, useEffect } from 'react';
-import { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
-import { ChatMessage } from './components/ChatMessage';
+import { ArrowUp } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import {
+  Navigate,
+  Route,
+  BrowserRouter as Router,
+  Routes,
+  useNavigate,
+  useParams,
+} from 'react-router-dom';
+import { AuthPage } from './components/AuthPage';
 import { ChatInput } from './components/ChatInput';
+import { ChatMessage } from './components/ChatMessage';
+import { LandingPage } from './components/LandingPage';
 import { Sidebar } from './components/Sidebar';
 import { WelcomeScreen } from './components/WelcomeScreen';
-import { AuthPage } from './components/AuthPage';
-import { LandingPage } from './components/LandingPage';
-import { useChat } from './hooks/useChat';
 import { useAuth } from './hooks/useAuth';
-import { ArrowUp } from 'lucide-react';
+import { useChat } from './hooks/useChat';
+import { useGetChatByIdQuery } from './redux/api/features/chat/chatApi';
+import { useGetHistoryQuery } from './redux/api/features/history/historyApi';
 
 function App() {
   return (
@@ -20,9 +28,9 @@ function App() {
 }
 
 function AppContent() {
-  const { isAuthenticated, login } = useAuth();
+  const { isAuthenticated, login, register } = useAuth();
   const navigate = useNavigate();
-  
+
   // Handle login success - properly navigate after authentication
   const handleLogin = async (email: string, password: string) => {
     try {
@@ -33,29 +41,51 @@ function AppContent() {
       console.error('Login failed:', error);
     }
   };
-  
+  const handleRegister = async (
+    name: string,
+    email: string,
+    password: string
+  ) => {
+    try {
+      await register(name, email, password);
+      navigate('/app');
+    } catch (error) {
+      console.error('Register failed:', error);
+    }
+  };
+
   return (
     <Routes>
       <Route path="/" element={<LandingPage />} />
-      <Route 
-        path="/app/*" 
+      <Route
+        path="/app"
         element={
           isAuthenticated ? (
             <ChatApplication />
           ) : (
             <Navigate to="/auth" replace />
           )
-        } 
+        }
       />
-      <Route 
-        path="/auth" 
+      <Route
+        path="/app/c/:chatId"
+        element={
+          isAuthenticated ? (
+            <ChatApplication />
+          ) : (
+            <Navigate to="/auth" replace />
+          )
+        }
+      />
+      <Route
+        path="/auth"
         element={
           isAuthenticated ? (
             <Navigate to="/app" replace />
           ) : (
-            <AuthPage onLogin={handleLogin} />
+            <AuthPage onLogin={handleLogin} onRegister={handleRegister} />
           )
-        } 
+        }
       />
       {/* Add a catch-all redirect to the landing page */}
       <Route path="*" element={<Navigate to="/" replace />} />
@@ -67,6 +97,7 @@ function ChatApplication() {
   const { user, logout } = useAuth();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const { chatId } = useParams();
   const {
     conversations,
     currentConversation,
@@ -75,7 +106,46 @@ function ChatApplication() {
     sendMessage,
     newConversation,
     selectConversation,
-  } = useChat();
+    hydrateConversation,
+  } = useChat(user?.email, chatId);
+  const navigate = useNavigate();
+  const { data: historyData } = useGetHistoryQuery(undefined, { skip: !user });
+  const { data: chatData, isFetching: isChatFetching } = useGetChatByIdQuery(
+    chatId as string,
+    { skip: !chatId }
+  );
+
+  // Push chatId to URL when it changes
+  useEffect(() => {
+    if (currentConversationId) {
+      navigate(`/app/c/${currentConversationId}`, { replace: false });
+    }
+  }, [currentConversationId]);
+
+  // When route chatId changes, select it
+  useEffect(() => {
+    if (chatId) {
+      selectConversation(chatId);
+    }
+  }, [chatId]);
+
+  // Hydrate conversation when chat data loads
+  useEffect(() => {
+    if (chatData?.chat) {
+      const mapped = {
+        id: chatData.chat.id,
+        title: chatData.chat.title,
+        messages: (chatData.chat.messages || []).map((m: any) => ({
+          id: m.id,
+          content: m.content,
+          role: m.role,
+          timestamp: new Date(m.timestamp),
+          structured_response: m.structured_response,
+        })),
+      };
+      hydrateConversation(mapped.id, mapped.title, mapped.messages);
+    }
+  }, [chatData]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -86,7 +156,7 @@ function ChatApplication() {
   useEffect(() => {
     scrollToBottom();
   }, [currentConversation?.messages]);
-  
+
   useEffect(() => {
     const handleScroll = () => {
       const scrollContainer = document.querySelector('.flex-1.overflow-y-auto');
@@ -96,12 +166,12 @@ function ChatApplication() {
         setShowScrollTop(false);
       }
     };
-    
+
     const scrollContainer = document.querySelector('.flex-1.overflow-y-auto');
     if (scrollContainer) {
       scrollContainer.addEventListener('scroll', handleScroll);
     }
-    
+
     return () => {
       if (scrollContainer) {
         scrollContainer.removeEventListener('scroll', handleScroll);
@@ -122,7 +192,11 @@ function ChatApplication() {
 
       <div className="relative z-10 h-full flex">
         <Sidebar
-          conversations={conversations}
+          conversations={(historyData?.chats || []).map((c: any) => ({
+            id: c.id,
+            title: c.title,
+            lastMessage: new Date(c.updatedAt),
+          }))}
           currentConversationId={currentConversationId}
           onNewConversation={newConversation}
           onSelectConversation={selectConversation}
@@ -131,7 +205,7 @@ function ChatApplication() {
           isCollapsed={isSidebarCollapsed}
           onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
         />
-        
+
         <div className="flex-1 flex flex-col">
           <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/20">
             {!currentConversation ? (
@@ -141,8 +215,8 @@ function ChatApplication() {
                 {currentConversation.messages.map((message) => (
                   <ChatMessage key={message.id} message={message} />
                 ))}
-                
-                {isLoading && (
+
+                {(isLoading || isChatFetching) && (
                   <div className="flex gap-3 p-4 justify-end">
                     <div className="max-w-[70%]">
                       <div className="p-4 rounded-2xl rounded-br-md bg-white/10 backdrop-blur-sm border border-white/20">
@@ -158,19 +232,21 @@ function ChatApplication() {
                     </div>
                   </div>
                 )}
-                
+
                 <div ref={messagesEndRef} />
               </div>
             )}
           </div>
-          
+
           <ChatInput onSendMessage={sendMessage} isLoading={isLoading} />
-          
+
           {/* Scroll to top button */}
           {showScrollTop && (
-            <button 
+            <button
               onClick={() => {
-                const scrollContainer = document.querySelector('.flex-1.overflow-y-auto');
+                const scrollContainer = document.querySelector(
+                  '.flex-1.overflow-y-auto'
+                );
                 if (scrollContainer) {
                   scrollContainer.scrollTo({ top: 0, behavior: 'smooth' });
                 }

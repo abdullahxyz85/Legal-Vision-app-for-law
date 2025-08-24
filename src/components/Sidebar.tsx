@@ -1,5 +1,13 @@
+import {
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  LogOut,
+  MessageSquare,
+  Plus,
+  User,
+} from 'lucide-react';
 import React from 'react';
-import { Plus, MessageSquare, User, ChevronDown, LogOut, ChevronLeft, ChevronRight } from 'lucide-react';
 import { User as UserType } from '../hooks/useAuth';
 
 interface SidebarProps {
@@ -28,7 +36,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onToggleCollapse,
 }) => {
   return (
-    <div className={`${isCollapsed ? 'w-16' : 'w-80'} bg-gray-900/50 backdrop-blur-sm border-r border-white/10 flex flex-col h-full transition-all duration-300 ease-in-out relative`}>
+    <div
+      className={`${
+        isCollapsed ? 'w-16' : 'w-80'
+      } bg-gray-900/50 backdrop-blur-sm border-r border-white/10 flex flex-col h-full transition-all duration-300 ease-in-out relative`}
+    >
       {/* Toggle Button */}
       <button
         onClick={onToggleCollapse}
@@ -40,8 +52,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div className="p-4 border-b border-white/10">
         <button
           onClick={onNewConversation}
-          className={`w-full flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'} p-3 rounded-xl bg-white/10 text-white hover:bg-white/15 transition-all duration-200`}
-          title={isCollapsed ? "New chat" : ""}
+          className={`w-full flex items-center ${
+            isCollapsed ? 'justify-center' : 'gap-3'
+          } p-3 rounded-xl bg-white/10 text-white hover:bg-white/15 transition-all duration-200`}
+          title={isCollapsed ? 'New chat' : ''}
         >
           <Plus size={18} />
           {!isCollapsed && <span className="font-medium">New chat</span>}
@@ -54,7 +68,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <div className="text-xs text-white/60 px-3 py-2 font-medium uppercase tracking-wider">
               Recent
             </div>
-            
+
             {conversations.map((conversation) => (
               <button
                 key={conversation.id}
@@ -117,7 +131,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         )}
 
         {isCollapsed && (
-          <button 
+          <button
             className="w-full flex items-center justify-center p-2 rounded-lg text-white/70 hover:bg-white/5 hover:text-white/90 transition-colors"
             title={user?.name || 'User Account'}
           >
@@ -126,11 +140,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
           </button>
         )}
-        
-        <button 
+
+        <button
           onClick={onLogout}
-          className={`w-full flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'} p-2 rounded-lg text-white/70 hover:bg-white/5 hover:text-white/90 transition-colors`}
-          title={isCollapsed ? "Sign Out" : ""}
+          className={`w-full flex items-center ${
+            isCollapsed ? 'justify-center' : 'gap-3'
+          } p-2 rounded-lg text-white/70 hover:bg-white/5 hover:text-white/90 transition-colors`}
+          title={isCollapsed ? 'Sign Out' : ''}
         >
           <LogOut size={16} />
           {!isCollapsed && <span className="text-sm">Sign Out</span>}

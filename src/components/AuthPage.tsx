@@ -1,39 +1,59 @@
+import {
+  ArrowRight,
+  Eye,
+  EyeOff,
+  Lock,
+  Mail,
+  Sparkles,
+  User,
+} from 'lucide-react';
 import React, { useState } from 'react';
-import { Eye, EyeOff, Mail, Lock, User, ArrowRight, Sparkles } from 'lucide-react';
 
 interface AuthPageProps {
-  onLogin: (email: string, password: string) => void;
+  onLogin: (email: string, password: string) => Promise<void> | void;
+  onRegister: (
+    name: string,
+    email: string,
+    password: string
+  ) => Promise<void> | void;
 }
 
-export const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
+export const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onRegister }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
   });
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    
+
     try {
-      // Call the login function from props - this should now properly redirect
-      await onLogin(formData.email, formData.password);
+      if (isLogin) {
+        await onLogin(formData.email, formData.password);
+      } else {
+        if (formData.password !== formData.confirmPassword) {
+          alert('Passwords do not match');
+          return;
+        }
+        await onRegister(formData.name, formData.email, formData.password);
+      }
     } catch (error) {
       console.error('Login error:', error);
       // Handle login error here if needed
-      alert('Login failed. Please try again.');
+      alert('Authentication failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   return (
@@ -58,7 +78,9 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
               {isLogin ? 'Welcome Back' : 'Create Account'}
             </h1>
             <p className="text-white/60">
-              {isLogin ? 'Sign in to continue your conversations' : 'Join us and start chatting with AI'}
+              {isLogin
+                ? 'Sign in to continue your conversations'
+                : 'Join us and start chatting with AI'}
             </p>
           </div>
 
@@ -124,7 +146,9 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
                   type={showPassword ? 'text' : 'password'}
                   placeholder="Confirm Password"
                   value={formData.confirmPassword}
-                  onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange('confirmPassword', e.target.value)
+                  }
                   className="w-full pl-12 pr-4 py-4 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all duration-300 hover:bg-white/10"
                   required={!isLogin}
                 />
@@ -150,7 +174,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
           {/* Toggle */}
           <div className="mt-8 text-center">
             <p className="text-white/60">
-              {isLogin ? "Don't have an account?" : "Already have an account?"}
+              {isLogin ? "Don't have an account?" : 'Already have an account?'}
               <button
                 onClick={() => setIsLogin(!isLogin)}
                 className="ml-2 text-blue-400 hover:text-blue-300 font-medium transition-colors"

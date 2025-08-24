@@ -17,15 +17,7 @@ export const apiSlice = createApi({
       return headers;
     },
   }),
-  tagTypes: [
-    'Campaign',
-    'Device',
-    'WhatsApp',
-    'User',
-    'browserProfileApi',
-    'messageTemplateApi',
-    'profileApi',
-  ],
+  tagTypes: ['History'],
   endpoints: () => ({
     // Base endpoints can be defined here or in separate slices
   }),

@@ -1,8 +1,22 @@
 import { apiSlice } from '../../apiSlice';
 
-// WhatsApp API endpoints
 export const authApi = apiSlice.injectEndpoints({
-  endpoints: (builder) => ({}),
+  endpoints: (builder) => ({
+    login: builder.mutation({
+      query: (body) => ({
+        url: '/login',
+        method: 'POST',
+        body,
+      }),
+    }),
+    register: builder.mutation({
+      query: (body) => ({
+        url: '/register',
+        method: 'POST',
+        body,
+      }),
+    }),
+  }),
 });
 
-export const {} = authApi;
+export const { useLoginMutation, useRegisterMutation } = authApi;

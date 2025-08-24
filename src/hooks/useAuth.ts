@@ -1,4 +1,10 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
+import {
+  useLoginMutation,
+  useRegisterMutation,
+} from '../redux/api/features/auth/authApi';
 
 export interface User {
   id: string;
@@ -7,11 +13,14 @@ export interface User {
 }
 
 const AUTH_STORAGE_KEY = 'legal-vision-auth-user';
+const TOKEN_STORAGE_KEY = 'authToken';
 
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [loginMutation] = useLoginMutation();
+  const [registerMutation] = useRegisterMutation();
 
   // Initialize user from localStorage on app start
   useEffect(() => {
@@ -33,35 +42,49 @@ export const useAuth = () => {
     initializeAuth();
   }, []);
 
-  const login = useCallback(async (email: string, password: string) => {
-    setIsLoading(true);
-    
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Mock user data - in a real app, this would come from your auth API
-      const mockUser: User = {
-        id: '1',
-        name: email.split('@')[0],
-        email: email,
-      };
-      
-      // Save user to localStorage for persistence
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(mockUser));
-      setUser(mockUser);
-    } catch (error) {
-      console.error('Login error:', error);
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  const login = useCallback(
+    async (email: string, password: string) => {
+      setIsLoading(true);
+      try {
+        const res = await loginMutation({ email, password }).unwrap();
+        const { token, user } = res;
+        localStorage.setItem(TOKEN_STORAGE_KEY, token);
+        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+        setUser(user);
+      } catch (error) {
+        console.error('Login error:', error);
+        throw error;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [loginMutation]
+  );
+
+  const register = useCallback(
+    async (name: string, email: string, password: string) => {
+      setIsLoading(true);
+      try {
+        const res = await registerMutation({ name, email, password }).unwrap();
+        const { token, user } = res;
+        localStorage.setItem(TOKEN_STORAGE_KEY, token);
+        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+        setUser(user);
+      } catch (error) {
+        console.error('Register error:', error);
+        throw error;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [registerMutation]
+  );
 
   const logout = useCallback(() => {
     // Clear user from state and localStorage
     setUser(null);
     localStorage.removeItem(AUTH_STORAGE_KEY);
+    localStorage.removeItem(TOKEN_STORAGE_KEY);
   }, []);
 
   return {
@@ -69,6 +92,7 @@ export const useAuth = () => {
     isLoading,
     isInitialized,
     login,
+    register,
     logout,
     isAuthenticated: !!user,
   };
