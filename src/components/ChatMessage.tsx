@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bot, User, FileText } from 'lucide-react';
+import { Bot, User, FileText, Image } from 'lucide-react';
 import { StructuredResponse } from './StructuredResponse';
 
 interface ChatMessageProps {
@@ -34,19 +34,18 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
   }
   
   return (
-    <div className={`flex gap-3 p-4 w-full ${isUser ? 'justify-start' : 'justify-end'}`}>
-      {/* User avatar - always on the left for user messages */}
-      {isUser && (
-        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
-          <User size={16} className="text-white" />
+    <div className={`flex gap-3 p-4 ${isUser ? 'justify-end' : 'justify-start'}`}>
+      {!isUser && (
+        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-600 flex items-center justify-center">
+          <Bot size={16} className="text-white" />
         </div>
       )}
       
-      <div className={`flex flex-col ${isUser ? 'items-start' : 'items-end'} max-w-[90%] sm:max-w-[80%] md:max-w-[70%] lg:max-w-[60%] xl:max-w-[50%]`}>
+      <div className={`${isUser ? 'max-w-[70%]' : 'max-w-[50%]'} ${!isUser ? 'order-2' : 'order-1'}`}>
         <div className={`p-4 rounded-2xl shadow-lg ${
           isUser 
-            ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-bl-md' 
-            : 'bg-gray-900/90 backdrop-blur-sm text-white rounded-br-md border border-white/10'
+            ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-br-md' 
+            : 'bg-gray-900/90 backdrop-blur-sm text-white rounded-bl-md border border-white/10'
         }`}>
           {!isUser && structuredData ? (
             <div className="space-y-4">
@@ -105,16 +104,14 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
             </div>
           )}
         </div>
-        
-        <div className={`text-xs text-white/40 mt-1 px-2 ${isUser ? 'self-start' : 'self-end'}`}>
+        <div className={`text-xs text-white/40 mt-1 px-2 ${isUser ? 'text-right' : 'text-left'}`}>
           {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </div>
       </div>
 
-      {/* Bot avatar - always on the right for bot messages */}
-      {!isUser && (
-        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-600 flex items-center justify-center">
-          <Bot size={16} className="text-white" />
+      {isUser && (
+        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
+          <User size={16} className="text-white" />
         </div>
       )}
     </div>
