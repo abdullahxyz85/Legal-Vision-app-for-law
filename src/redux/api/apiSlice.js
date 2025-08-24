@@ -1,21 +1,21 @@
-import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
-import { API_BASE_URL } from '../../constants/enviroment'
+import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+import { BACKEND_BASE_URL } from '../../constants/enviroments';
 
 // Define the base API slice
 export const apiSlice = createApi({
   reducerPath: 'api',
   baseQuery: fetchBaseQuery({
-    baseUrl: API_BASE_URL, // Adjust this to your API base URL
+    baseUrl: BACKEND_BASE_URL, // Adjust this to your API base URL
     prepareHeaders: (headers) => {
       // Add authentication headers if needed
-      const token = localStorage.getItem('authToken') // Example of getting token from localStorage
+      const token = localStorage.getItem('authToken'); // Example of getting token from localStorage
 
       if (token) {
-        headers.set('authorization', `Bearer ${token}`)
+        headers.set('authorization', `Bearer ${token}`);
       }
       // headers.set('Content-Type', 'application/json')
-      return headers
-    }
+      return headers;
+    },
   }),
   tagTypes: [
     'Campaign',
@@ -24,11 +24,11 @@ export const apiSlice = createApi({
     'User',
     'browserProfileApi',
     'messageTemplateApi',
-    'profileApi'
+    'profileApi',
   ],
   endpoints: () => ({
     // Base endpoints can be defined here or in separate slices
-  })
-})
+  }),
+});
 
-export default apiSlice
+export default apiSlice;
